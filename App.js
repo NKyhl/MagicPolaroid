@@ -1,39 +1,30 @@
-import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useState } from 'react';
-import { Button, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Button, Image, View, StyleSheet } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 
-export default function App() {
-  const [facing, setFacing] = useState('back');
-  const [permission, requestPermission] = useCameraPermissions();
+export default function ImagePickerExample() {
+  const [image, setImage] = useState(null);
 
-  if (!permission) {
-    // Camera permissions are still loading.
-    return <View />;
-  }
+  const pickImage = async () => {
+    // No permissions request is necessary for launching the image library
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images', 'videos'],
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
 
-  if (!permission.granted) {
-    // Camera permissions are not granted yet.
-    return (
-      <View style={styles.container}>
-        <Text style={styles.message}>We need your permission to show the camera</Text>
-        <Button onPress={requestPermission} title="grant permission" />
-      </View>
-    );
-  }
+    console.log(result);
 
-  function toggleCameraFacing() {
-    setFacing(current => (current === 'back' ? 'front' : 'back'));
-  }
+    if (!result.canceled) {
+      setImage(result.assets[0].uri);
+    }
+  };
 
   return (
     <View style={styles.container}>
-      <CameraView style={styles.camera} facing={facing}>
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.button} onPress={toggleCameraFacing}>
-            <Text style={styles.text}>Flip Camera</Text>
-          </TouchableOpacity>
-        </View>
-      </CameraView>
+      <Button title="Pick an image from camera roll" onPress={pickImage} />
+      {image && <Image source={{ uri: image }} style={styles.image} />}
     </View>
   );
 }
@@ -41,29 +32,11 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  message: {
-    textAlign: 'center',
-    paddingBottom: 10,
-  },
-  camera: {
-    flex: 1,
-  },
-  buttonContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    backgroundColor: 'transparent',
-    margin: 64,
-  },
-  button: {
-    flex: 1,
-    alignSelf: 'flex-end',
-    alignItems: 'center',
-  },
-  text: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
+  image: {
+    width: 200,
+    height: 200,
   },
 });
