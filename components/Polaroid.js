@@ -1,9 +1,13 @@
-import { useEffect } from 'react';
-import { View, Image, Text } from 'react-native';
+import { View, Image, Text, TouchableOpacity } from 'react-native';
 
-export default function Polaroid({ title, image }) {
+export default function Polaroid({ title, image, onCancel}) {
     return (
         <View style={[styles.polaroid, styles.shadow]}>
+            {image && (
+                <TouchableOpacity style={styles.closeButton} onPress={onCancel}>
+                    <Text style={styles.closeButtonText}>X</Text>
+                </TouchableOpacity>
+            )}
             {image ? (
                 <Image source={{ uri: image }} style={styles.polaroidImage}/>
             ) : (
@@ -53,5 +57,23 @@ const styles = {
         shadowOffset: {width: 0, height: 4},
         shadowOpacity: 0.2,
         shadowRadius: 3,
-      },
+    },
+    closeButton: {
+        position: 'absolute',
+        right: -15,
+        top: -15,
+        width: 30,
+        height: 30,
+        borderRadius: 15,
+        backgroundColor: 'red',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 1,
+    },
+    closeButtonText: {
+        color: 'white',
+        fontFamily: 'PermanentMarker-Regular',
+        fontSize: 18,
+        lineHeight: 24,
+    }
 };

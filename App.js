@@ -102,7 +102,14 @@ export default function App() {
   return (
     <SafeAreaView style={styles.container}>
       <TouchableOpacity underlayColor={"white"} onPress={() => {setModalVisible(true)}}>
-        <Polaroid title={label || "Label me"} image={image || null}/>
+        <Polaroid 
+          title={label || "Label me"}
+          image={image || null}
+          onCancel={() => {
+            setImage(null);
+            setLabel("");
+          }}
+        />
       </TouchableOpacity>
       {/* <Text style={styles.title}>Submit Training Data</Text> */}
       {/* {image && <Text style={styles.imageCaption}>Make sure the full building is within the photo!</Text>} */}
