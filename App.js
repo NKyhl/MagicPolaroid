@@ -1,16 +1,40 @@
-import { useState } from 'react';
-import { Button, Image, Text, View, Modal, StyleSheet, Appearance, SafeAreaView } from 'react-native';
+import { useState, useEffect, useRef } from 'react';
+import { Button, TouchableOpacity, View, Modal, StyleSheet, Appearance, SafeAreaView, Text } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { ImageManipulator } from 'expo-image-manipulator';
+import Polaroid from './components/Polaroid';
+import { useFonts } from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
+import {Picker} from '@react-native-picker/picker';
 
-export default function ImagePickerExample() {
+SplashScreen.preventAutoHideAsync()
+
+export default function App() {
   const [image, setImage] = useState(null);
+  const [label, setLabel] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
+  const pickerRef = useRef();
+  
+  // Load the PermanentMarker font
+  const [fontsLoaded, fontsError] = useFonts({
+    'PermanentMarker': require('./assets/fonts/PermanentMarker-Regular.ttf'),
+  });
 
-  Appearance.setColorScheme('light')
+  useEffect(() => {
+    if (fontsLoaded || fontsError) {
+      SplashScreen.hideAsync()
+    }
+  }, [fontsLoaded, fontsError]);
 
-  const pickImage = async () => {
-    // No permissions request is necessary for launching the image library
+  if (!fontsLoaded && !fontsError) {
+    return null;
+  }
+
+  // Force application light mode
+  Appearance.setColorScheme('light');
+
+  // Choose an image from the Image Library
+  const openImageLibrary = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
@@ -28,6 +52,7 @@ export default function ImagePickerExample() {
     }
   };
 
+  // Open the camera to take a new photo
   const openCamera = async () => {
     let result = await ImagePicker.launchCameraAsync({
       mediaTypes: ['images'],
@@ -45,6 +70,7 @@ export default function ImagePickerExample() {
     }
   }
 
+  // Resize the image to 224x224
   const resizeImage = async (uri) => {
     const ManipulatorContext = ImageManipulator.manipulate(uri);
     ManipulatorContext.resize({ width: 224, height: 224 });
@@ -53,6 +79,7 @@ export default function ImagePickerExample() {
     return manipResult.uri;
   }
 
+  // Send the image to the server
   const sendImage = async () => {
     const formData = new FormData();
     formData.append('image', image);
@@ -74,9 +101,11 @@ export default function ImagePickerExample() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>ND Building Classifier</Text>
-      {image && <Image source={{ uri: image }} style={styles.image} />}
-      {image && <Text style={styles.imageCaption}>Make sure the full building is within the photo!</Text>}
+      <TouchableOpacity underlayColor={"white"} onPress={() => {setModalVisible(true)}}>
+        <Polaroid title={label || "Label me"} image={image || null}/>
+      </TouchableOpacity>
+      {/* <Text style={styles.title}>Submit Training Data</Text> */}
+      {/* {image && <Text style={styles.imageCaption}>Make sure the full building is within the photo!</Text>} */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -86,18 +115,46 @@ export default function ImagePickerExample() {
         }}>
         <View style={styles.centeredView}>
           <View style={styles.modalView}>
-            <Button title="Take a New Photo" onPress={openCamera} />
-            <Button title="Select from Library" onPress={pickImage} />
-            <Button
-              title="Close"
-              onPress={() => {
-                setModalVisible(false);
-              }}
-            />
+            {!image ? (
+              <>
+                <Button title="Take a New Photo" onPress={openCamera} />
+                <Button title="Select from Library" onPress={openImageLibrary} />
+                <Button
+                  title="Close"
+                  onPress={() => {
+                    setModalVisible(false);
+                  }}
+                />
+              </>
+            ) : (
+              <>
+                <Picker
+                  ref={pickerRef}
+                  style={{ height: 200, width: 270, margin: 0 }}
+                  itemStyle={{fontFamily: 'PermanentMarker'}}
+                  enabled={false}
+                  selectedValue={label}
+                  onValueChange={(val, index) => 
+                    setLabel(val)
+                  }>
+                  <Picker.Item label="Label me" value="" />
+                  <Picker.Item label="Main Building" value="Main Building" />
+                  <Picker.Item label="Basilica" value="Basilica" />
+                  <Picker.Item label="Dillon Hall" value="Dillon Hall" />
+                </Picker>
+                <Button
+                title="Save"
+                onPress={() => {
+                  setModalVisible(false);
+                }}
+                />
+              </>
+            )}
           </View>
         </View>
       </Modal>
-      <View style={styles.buttonContainer}>
+      {/* {image && <Button title="Classify Building" onPress={sendImage} />} */}
+      {/* <View style={styles.buttonContainer}>
         <Button
           title={!image ? "Select Photo" : "Change Photo"}
           onPress={() => {
@@ -105,7 +162,7 @@ export default function ImagePickerExample() {
           }}
           />
         {image && <Button title="Classify Building" onPress={sendImage} />}
-      </View>
+      </View> */}
     </SafeAreaView>
   );
 }
@@ -116,6 +173,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'column',
+    backgroundColor: '#ecf0f1',
   },
   image: {
     width: 300,
