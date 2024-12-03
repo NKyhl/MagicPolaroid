@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@react-native-picker/picker": "^2.10.2",
+    "dotenv": "^16.4.7",
     "expo": "^52.0.0",
     "expo-font": "^13.0.1",
     "expo-image-manipulator": "^13.0.5",

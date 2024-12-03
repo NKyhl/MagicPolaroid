@@ -79,24 +79,38 @@ export default function App() {
     return manipResult.uri;
   }
 
-  // Send the image to the server
-  const sendImage = async () => {
-    const formData = new FormData();
-    formData.append('image', image);
-    fetch('URL', {
-      method: 'POST',
-      body: formData,
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    })
-      .then(response => response.json())
-      .then(data => {
-        console.log(data);
-      })
-      .catch(error => {
-        console.error('Error:', error);
+  // Submit the image-label pair to the server as training data
+  const submitImage = async () => {
+    const serverUrl = process.env.SERVER_URL;
+
+    try {
+      const formData = new FormData();
+      formData.append('label', label);
+      formData.append('image', {
+        uri: image,
+        type: 'image/jpeg',
+        name: 'image.jpg',
       });
+
+      const response = await fetch(serverUrl, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      const result = await response.json();
+      if (response.ok) {
+        console.log('Success');
+        setImage(null);
+        setLabel("");
+      } else {
+        console.log(`Failure. Server responded with status ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error submitting image and label:', error);
+    }
   }
 
   return (
@@ -147,7 +161,17 @@ export default function App() {
                   <Picker.Item label="Label me" value="" />
                   <Picker.Item label="Main Building" value="Main Building" />
                   <Picker.Item label="Basilica" value="Basilica" />
+                  <Picker.Item label="Duncan Student Center" value="Duncan Student Center" />
+                  <Picker.Item label="LaFortune Student Center" value="LaFortune Student Center" />
+                  <Picker.Item label="Log Chapel" value="Log Chapel" />
+                  <Picker.Item label="Hesburgh Library" value="Hesburgh Library" />
+                  <Picker.Item label="The Grotto" value="The Grotto" />
+                  <Picker.Item label="South Dining Hall" value="South Dining Hall" />
+                  <Picker.Item label="North Dining Hall" value="North Dining Hall" />
+                  <Picker.Item label="Bond Hall" value="Bond Hall" />
+                  <Picker.Item label="DeBartolo Hall" value="DeBartolo Hall" />
                   <Picker.Item label="Dillon Hall" value="Dillon Hall" />
+                  <Picker.Item label="Graham Family Hall" value="Graham Family Hall" />
                 </Picker>
                 <Button
                 title="Save"
@@ -161,15 +185,9 @@ export default function App() {
         </View>
       </Modal>
       {/* {image && <Button title="Classify Building" onPress={sendImage} />} */}
-      {/* <View style={styles.buttonContainer}>
-        <Button
-          title={!image ? "Select Photo" : "Change Photo"}
-          onPress={() => {
-            setModalVisible(true);
-          }}
-          />
-        {image && <Button title="Classify Building" onPress={sendImage} />}
-      </View> */}
+      <View style={styles.buttonContainer}>
+        {(image && label) && <Button title="Submit Image for Training" onPress={submitImage} />}
+      </View>
     </SafeAreaView>
   );
 }
