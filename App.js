@@ -176,7 +176,7 @@ export default function App() {
   // Choose an image from the Image Library
   const openImageLibrary = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 1,
@@ -191,12 +191,15 @@ export default function App() {
 
   // Open the camera to take a new photo
   const openCamera = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    console.log("Opening camera with status", status);
     let result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0,
+      quality: 1,
     });
+    console.log("Camera result:", result);
 
     if (!result.canceled) {
       const resizedImage = await resizeImage(result.assets[0].uri);
