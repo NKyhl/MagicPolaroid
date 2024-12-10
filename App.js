@@ -265,7 +265,8 @@ export default function App() {
           style={{ transform: pan.getTranslateTransform() }}
         >
           <Polaroid
-            title={label || "Drag to Reveal"}
+            title={label}
+            defaultText={"Drag to Reveal"}
             image={image || null}
             animationStart={animationStart}
             onCancel={() => {

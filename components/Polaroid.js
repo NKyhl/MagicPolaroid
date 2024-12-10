@@ -6,7 +6,7 @@ import {
   Animated,
 } from "react-native";
 
-export default function Polaroid({ title, image, animationStart, onCancel }) {
+export default function Polaroid({ title, defaultText, image, animationStart, onCancel }) {
 	const fadeIn = useRef(new Animated.Value(0)).current; // Starting value for fading in image
   const fadeOut = useRef(new Animated.Value(1)).current; // Starting value for fading out default square
 
@@ -56,6 +56,17 @@ export default function Polaroid({ title, image, animationStart, onCancel }) {
         <View style={styles.polaroidImageDefault} />
       )}
       <View style={styles.polaroidTextContainer}>
+        {image && (
+          <>
+          {/* Label fades default text out and new label in as photo crossfades */}
+          <Animated.Text style={[styles.polaroidText, { opacity: fadeOut }]}>
+            {defaultText}
+          </Animated.Text>
+          <Animated.Text style={[styles.polaroidText, { opacity: fadeIn }]}>
+            {title}
+          </Animated.Text>
+          </>
+        )}
         <Text style={styles.polaroidText}>{image && title}</Text>
       </View>
     </View>
@@ -97,6 +108,8 @@ const styles = {
   },
   polaroidTextContainer: {
 		position: "absolute",
+    justifyContent: "center",
+    alignItems: "center",
 		top: 280,
     marginTop: 10,
     height: 40,
@@ -104,6 +117,7 @@ const styles = {
     borderRadius: 2,
   },
   polaroidText: {
+    position: "absolute",
     fontFamily: "PermanentMarker-Regular",
     textAlign: "center",
     fontSize: 24,
