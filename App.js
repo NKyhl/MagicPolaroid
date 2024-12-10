@@ -273,6 +273,7 @@ export default function App() {
               setLabel("");
               firstDrag.current = false;
               setAnimationStart(false);
+              setVerifyVisible(false);
             }}
           />
         </Animated.View>
