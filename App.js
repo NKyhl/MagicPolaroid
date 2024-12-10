@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import {
   Button,
-  TouchableOpacity,
   View,
   Modal,
   StyleSheet,
@@ -10,8 +9,6 @@ import {
   Text,
   Animated,
   PanResponder,
-  Dimensions,
-  ScrollView,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { ImageManipulator } from "expo-image-manipulator";
@@ -21,7 +18,6 @@ import * as SplashScreen from "expo-splash-screen";
 import DropDownPicker from "react-native-dropdown-picker";
 
 SplashScreen.preventAutoHideAsync();
-const { width, height } = Dimensions.get("window");
 
 export default function App() {
   const [image, setImage] = useState(null); // The image URI
@@ -30,7 +26,6 @@ export default function App() {
   const [modalVisible, setModalVisible] = useState(false);
   const firstDrag = useRef(false); // Turns true at the start of each drag gesture
   const [animationStart, setAnimationStart] = useState(false); // Triggers beginning of polaroid cross-fade/develop animation
-  const pickerRef = useRef();
   const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const [verifyVisible, setVerifyVisible] = useState(false);
   const [dropdownVisible, setDropdownVisible] = useState(false);
@@ -53,7 +48,113 @@ export default function App() {
     { label: "SDH", value: "sdh" },
   ];
 
-  // Classify image
+  // Keep image Ref up to date with image State.
+  useEffect(() => {
+    imageRef.current = image;
+  }, [image]);
+
+  // PanResponder for drag / click gestures
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderGrant: async () => {
+        // Open the modal if no image is present
+        if (!imageRef.current) {
+          setModalVisible(true);
+          
+        // Classify the image if present and the first drag
+        } else if (!firstDrag.current) {
+          classifyImage(imageRef.current);
+          firstDrag.current = true;
+          setAnimationStart(true);
+        }
+      },
+      onPanResponderMove: (e, gestureState) => {
+        // Update the position as the user drags if the image is present
+        if (imageRef.current) {
+          pan.setValue({ x: gestureState.dx, y: gestureState.dy });
+        }
+      },
+      onPanResponderRelease: () => {
+        // Glide back to the center when released
+        Animated.spring(pan, {
+          toValue: { x: 0, y: 0 },
+          useNativeDriver: true,
+          stiffness: 200,
+          damping: 10,
+        }).start();
+      },
+    })
+  ).current;
+
+  // Load the PermanentMarker font
+  const [fontsLoaded, fontsError] = useFonts({
+    PermanentMarker: require("./assets/fonts/PermanentMarker-Regular.ttf"),
+  });
+
+  useEffect(() => {
+    if (fontsLoaded || fontsError) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, fontsError]);
+
+  if (!fontsLoaded && !fontsError) {
+    return null;
+  }
+
+  // Force application light mode
+  Appearance.setColorScheme("light");
+
+  // Open the Image Library to select a photo
+  const openImageLibrary = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      print('image set');
+      const resizedImage = await resizeImage(result.assets[0].uri);
+      setImage(resizedImage);
+      setModalVisible(false);
+    } else {
+      console.error("Image Library cancelled");
+    }
+  };
+
+  // Open the camera to take a new photo
+  const openCamera = async () => {
+    let result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0,
+    });
+
+    if (!result.canceled) {
+      const resizedImage = await resizeImage(result.assets[0].uri);
+      setImage(resizedImage);
+      setModalVisible(false);
+      print('image set');
+    } else {
+      console.error("Camera cancelled");
+    }
+  };
+
+  // Resize the image to 224x224
+  const resizeImage = async (uri) => {
+    const ManipulatorContext = ImageManipulator.manipulate(uri);
+    ManipulatorContext.resize({ width: 224, height: 224 });
+    const manipResult = await (
+      await ManipulatorContext.renderAsync()
+    ).saveAsync();
+
+    return manipResult.uri;
+  };
+
+  // Submit the image to the server for classification
   const classifyImage = async (image) => {
     const serverUrl = "http://52.91.173.94:8080/classify";
 
@@ -83,99 +184,6 @@ export default function App() {
     } catch (error) {
       console.error("Error submitting image and label:", error);
     }
-  };
-
-  // Keep image Ref up to date with image State.
-  useEffect(() => {
-    imageRef.current = image;
-  }, [image]);
-
-  // PanResponder for drag gestures
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onPanResponderGrant: async () => {
-        if (!imageRef.current) {
-          setModalVisible(true);
-        } else if (!firstDrag.current) {
-          classifyImage(imageRef.current);
-          firstDrag.current = true;
-          setAnimationStart(true);
-        }
-      },
-      onPanResponderMove: (e, gestureState) => {
-        if (imageRef.current) {
-          pan.setValue({ x: gestureState.dx, y: gestureState.dy });
-        }
-      },
-      onPanResponderRelease: () => {
-        Animated.spring(pan, {
-          toValue: { x: 0, y: 0 },
-          useNativeDriver: true,
-        }).start();
-      },
-    })
-  ).current;
-
-  // Load the PermanentMarker font
-  const [fontsLoaded, fontsError] = useFonts({
-    PermanentMarker: require("./assets/fonts/PermanentMarker-Regular.ttf"),
-  });
-
-  useEffect(() => {
-    if (fontsLoaded || fontsError) {
-      SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded, fontsError]);
-
-  if (!fontsLoaded && !fontsError) {
-    return null;
-  }
-
-  // Force application light mode
-  Appearance.setColorScheme("light");
-
-  // Choose an image from the Image Library
-  const openImageLibrary = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 1,
-    });
-
-    if (!result.canceled) {
-      const resizedImage = await resizeImage(result.assets[0].uri);
-      setImage(resizedImage);
-      setModalVisible(false);
-    }
-  };
-
-  // Open the camera to take a new photo
-  const openCamera = async () => {
-    let result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0,
-    });
-
-    if (!result.canceled) {
-      const resizedImage = await resizeImage(result.assets[0].uri);
-      setImage(resizedImage);
-      setModalVisible(false);
-    }
-  };
-
-  // Resize the image to 224x224
-  const resizeImage = async (uri) => {
-    const ManipulatorContext = ImageManipulator.manipulate(uri);
-    ManipulatorContext.resize({ width: 224, height: 224 });
-    const manipResult = await (
-      await ManipulatorContext.renderAsync()
-    ).saveAsync();
-
-    return manipResult.uri;
   };
 
   // Submit the image-label pair to the server as training data

@@ -1,11 +1,9 @@
 import { useEffect, useRef } from "react";
 import {
   View,
-  Image,
   Text,
   TouchableOpacity,
   Animated,
-  useAnimatedValue,
 } from "react-native";
 
 export default function Polaroid({ title, image, animationStart, onCancel }) {
@@ -13,9 +11,7 @@ export default function Polaroid({ title, image, animationStart, onCancel }) {
   const fadeOut = useRef(new Animated.Value(1)).current; // Starting value for fading out default square
 
   useEffect(() => {
-		console.log("trigger");
     if (animationStart) {
-      console.log("Animation started");
       Animated.parallel([
         Animated.timing(fadeIn, {
           toValue: 1,
