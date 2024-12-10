@@ -52,7 +52,77 @@ export default function App() {
   useEffect(() => {
     imageRef.current = image;
   }, [image]);
+  
+  // Submit the image to the server for classification
+  const classifyImage = async (image) => {
+    const serverUrl = "http://52.91.173.94:8080/classify";
 
+    try {
+      const formData = new FormData();
+      formData.append("image", {
+        uri: image,
+        type: "image/jpeg",
+        name: "image.jpg",
+      });
+
+      console.log("Submitting image to server for classification...");
+
+      const response = await fetch(serverUrl, {
+        method: "POST",
+        body: formData,
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      console.log("Server responded with status", response.status);
+      
+      const result = await response.json();
+      if (response.ok) {
+        setTimeout(() => setVerifyVisible(true), 500); // Delay the prompt slightly for smoother UX
+        setLabel(result.label);
+      } else {
+        console.log(`Failure. Server responded with status ${response.status}`);
+      }
+    } catch (error) {
+      console.error("Error submitting image and label:", error);
+    }
+  };
+  
+  // Submit the image-label pair to the server as training data
+  const submitImage = async (finalLabel) => {
+    const serverUrl = "http://52.91.173.94:8080/submit";
+
+    try {
+      const formData = new FormData();
+      formData.append("label", finalLabel);
+      formData.append("image", {
+        uri: image,
+        type: "image/jpeg",
+        name: "image.jpg",
+      });
+
+      const response = await fetch(serverUrl, {
+        method: "POST",
+        body: formData,
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      if (response.ok) {
+        setImage(null);
+        setLabel("");
+        firstDrag.current = false;
+        setAnimationStart(false);
+      } else {
+        console.log(`Failure. Server responded with status ${response.status}`);
+      }
+    } catch (error) {
+      console.error("Error submitting image and label:", error);
+    }
+  };
+  
   // PanResponder for drag / click gestures
   const panResponder = useRef(
     PanResponder.create({
@@ -152,72 +222,6 @@ export default function App() {
     ).saveAsync();
 
     return manipResult.uri;
-  };
-
-  // Submit the image to the server for classification
-  const classifyImage = async (image) => {
-    const serverUrl = "http://52.91.173.94:8080/classify";
-
-    try {
-      const formData = new FormData();
-      formData.append("image", {
-        uri: image,
-        type: "image/jpeg",
-        name: "image.jpg",
-      });
-
-      const response = await fetch(serverUrl, {
-        method: "POST",
-        body: formData,
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-      const result = await response.json();
-      if (response.ok) {
-        setTimeout(() => setVerifyVisible(true), 500); // Delay the prompt slightly for smoother UX
-        setLabel(result.label);
-      } else {
-        console.log(`Failure. Server responded with status ${response.status}`);
-      }
-    } catch (error) {
-      console.error("Error submitting image and label:", error);
-    }
-  };
-
-  // Submit the image-label pair to the server as training data
-  const submitImage = async (finalLabel) => {
-    const serverUrl = "http://52.91.173.94:8080/submit";
-
-    try {
-      const formData = new FormData();
-      formData.append("label", finalLabel);
-      formData.append("image", {
-        uri: image,
-        type: "image/jpeg",
-        name: "image.jpg",
-      });
-
-      const response = await fetch(serverUrl, {
-        method: "POST",
-        body: formData,
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-      if (response.ok) {
-        setImage(null);
-        setLabel("");
-        firstDrag.current = false;
-        setAnimationStart(false);
-      } else {
-        console.log(`Failure. Server responded with status ${response.status}`);
-      }
-    } catch (error) {
-      console.error("Error submitting image and label:", error);
-    }
   };
 
   return (
