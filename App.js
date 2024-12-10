@@ -65,8 +65,6 @@ export default function App() {
         name: "image.jpg",
       });
 
-      console.log("Submitting image to server for classification...");
-
       const response = await fetch(serverUrl, {
         method: "POST",
         body: formData,
@@ -74,8 +72,6 @@ export default function App() {
           "Content-Type": "multipart/form-data",
         },
       });
-
-      console.log("Server responded with status", response.status);
       
       const result = await response.json();
       if (response.ok) {
@@ -240,6 +236,7 @@ export default function App() {
               setLabel("");
               firstDrag.current = false;
               setAnimationStart(false);
+              setVerifyVisible(false);
             }}
           />
         </Animated.View>
