@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import {
   Button,
+  TouchableOpacity,
   View,
   Modal,
   StyleSheet,
@@ -9,6 +10,8 @@ import {
   Text,
   Animated,
   PanResponder,
+  Dimensions,
+  ScrollView,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { ImageManipulator } from "expo-image-manipulator";
@@ -18,6 +21,10 @@ import * as SplashScreen from "expo-splash-screen";
 import DropDownPicker from "react-native-dropdown-picker";
 
 SplashScreen.preventAutoHideAsync();
+const { width, height } = Dimensions.get("window");
+
+// Global variable for serverUrl
+let globalServerUrl = null;
 
 export default function App() {
   const [image, setImage] = useState(null); // The image URI
@@ -26,11 +33,13 @@ export default function App() {
   const [modalVisible, setModalVisible] = useState(false);
   const firstDrag = useRef(false); // Turns true at the start of each drag gesture
   const [animationStart, setAnimationStart] = useState(false); // Triggers beginning of polaroid cross-fade/develop animation
+  const pickerRef = useRef();
   const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const [verifyVisible, setVerifyVisible] = useState(false);
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [correctLabel, setCorrectLabel] = useState(null);
   const [openDropdown, setOpenDropdown] = useState(false);
+  const [serverUrl, setServerUrl] = useState(null); // Server URL stored as state
 
   const buildingLabels = [
     { label: "Basilica", value: "basilica" },
@@ -48,14 +57,43 @@ export default function App() {
     { label: "SDH", value: "sdh" },
   ];
 
-  // Keep image Ref up to date with image State.
+  // Fetch server information from catalog
   useEffect(() => {
-    imageRef.current = image;
-  }, [image]);
-  
-  // Submit the image to the server for classification
+    const fetchServerInfo = async () => {
+      const catalogUrl = "http://catalog.cse.nd.edu:9097/query.json";
+      try {
+        const response = await fetch(catalogUrl);
+        const data = await response.json();
+
+        const serverDetails = data.find(
+          (listing) =>
+            listing.type === "magic-polaroid" && listing.owner === "mvankir2"
+        );
+
+        if (serverDetails) {
+          const url = `http://${serverDetails.address}:${serverDetails.port}`;
+          setServerUrl(url);
+          globalServerUrl = url; // Set global server URL
+          console.log("Server URL set to:", url); // Debug log for server URL
+        } else {
+          console.error("Server details not found in catalog");
+        }
+      } catch (error) {
+        console.error("Error fetching server details:", error);
+      }
+    };
+
+    fetchServerInfo();
+  }, []);
+
+  // Classify image
   const classifyImage = async (image) => {
-    const serverUrl = "http://52.91.173.94:8080/classify";
+    const currentServerUrl = globalServerUrl || serverUrl; // Use globalServerUrl as fallback
+    console.log("ClassifyImage called with serverUrl:", currentServerUrl); // Debug log for classifyImage
+    if (!currentServerUrl) {
+      console.error("Server URL not set. Unable to classify image.");
+      return;
+    }
 
     try {
       const formData = new FormData();
@@ -65,14 +103,14 @@ export default function App() {
         name: "image.jpg",
       });
 
-      const response = await fetch(serverUrl, {
+      const response = await fetch(`${currentServerUrl}/classify`, {
         method: "POST",
         body: formData,
         headers: {
           "Content-Type": "multipart/form-data",
         },
       });
-      
+
       const result = await response.json();
       if (response.ok) {
         setTimeout(() => setVerifyVisible(true), 500); // Delay the prompt slightly for smoother UX
@@ -84,51 +122,19 @@ export default function App() {
       console.error("Error submitting image and label:", error);
     }
   };
-  
-  // Submit the image-label pair to the server as training data
-  const submitImage = async (finalLabel) => {
-    const serverUrl = "http://52.91.173.94:8080/submit";
 
-    try {
-      const formData = new FormData();
-      formData.append("label", finalLabel);
-      formData.append("image", {
-        uri: image,
-        type: "image/jpeg",
-        name: "image.jpg",
-      });
+  // Keep image Ref up to date with image State.
+  useEffect(() => {
+    imageRef.current = image;
+  }, [image]);
 
-      const response = await fetch(serverUrl, {
-        method: "POST",
-        body: formData,
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-      if (response.ok) {
-        setImage(null);
-        setLabel("");
-        firstDrag.current = false;
-        setAnimationStart(false);
-      } else {
-        console.log(`Failure. Server responded with status ${response.status}`);
-      }
-    } catch (error) {
-      console.error("Error submitting image and label:", error);
-    }
-  };
-  
-  // PanResponder for drag / click gestures
+  // PanResponder for drag gestures
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onPanResponderGrant: async () => {
-        // Open the modal if no image is present
         if (!imageRef.current) {
           setModalVisible(true);
-          
-        // Classify the image if present and the first drag
         } else if (!firstDrag.current) {
           classifyImage(imageRef.current);
           firstDrag.current = true;
@@ -136,18 +142,14 @@ export default function App() {
         }
       },
       onPanResponderMove: (e, gestureState) => {
-        // Update the position as the user drags if the image is present
         if (imageRef.current) {
           pan.setValue({ x: gestureState.dx, y: gestureState.dy });
         }
       },
       onPanResponderRelease: () => {
-        // Glide back to the center when released
         Animated.spring(pan, {
           toValue: { x: 0, y: 0 },
           useNativeDriver: true,
-          stiffness: 200,
-          damping: 10,
         }).start();
       },
     })
@@ -171,29 +173,26 @@ export default function App() {
   // Force application light mode
   Appearance.setColorScheme("light");
 
-  // Open the Image Library to select a photo
+  // Choose an image from the Image Library
   const openImageLibrary = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
       quality: 1,
     });
 
     if (!result.canceled) {
-      print('image set');
       const resizedImage = await resizeImage(result.assets[0].uri);
       setImage(resizedImage);
       setModalVisible(false);
-    } else {
-      console.error("Image Library cancelled");
     }
   };
 
   // Open the camera to take a new photo
   const openCamera = async () => {
     let result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ["images"],
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0,
@@ -203,9 +202,6 @@ export default function App() {
       const resizedImage = await resizeImage(result.assets[0].uri);
       setImage(resizedImage);
       setModalVisible(false);
-      print('image set');
-    } else {
-      console.error("Camera cancelled");
     }
   };
 
@@ -218,6 +214,44 @@ export default function App() {
     ).saveAsync();
 
     return manipResult.uri;
+  };
+
+  // Submit the image-label pair to the server as training data
+  const submitImage = async (finalLabel) => {
+    const currentServerUrl = globalServerUrl || serverUrl; // Use globalServerUrl as fallback
+    if (!currentServerUrl) {
+      console.error("Server URL not set. Unable to submit image.");
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append("label", finalLabel);
+      formData.append("image", {
+        uri: image,
+        type: "image/jpeg",
+        name: "image.jpg",
+      });
+
+      const response = await fetch(`${currentServerUrl}/submit`, {
+        method: "POST",
+        body: formData,
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      if (response.ok) {
+        setImage(null);
+        setLabel("");
+        firstDrag.current = false;
+        setAnimationStart(false);
+      } else {
+        console.log(`Failure. Server responded with status ${response.status}`);
+      }
+    } catch (error) {
+      console.error("Error submitting image and label:", error);
+    }
   };
 
   return (
@@ -236,7 +270,6 @@ export default function App() {
               setLabel("");
               firstDrag.current = false;
               setAnimationStart(false);
-              setVerifyVisible(false);
             }}
           />
         </Animated.View>
@@ -380,4 +413,3 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 });
-
