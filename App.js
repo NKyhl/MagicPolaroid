@@ -275,6 +275,7 @@ export default function App() {
               firstDrag.current = false;
               setAnimationStart(false);
               setVerifyVisible(false);
+              setDropdownVisible(false);
             }}
           />
         </Animated.View>
