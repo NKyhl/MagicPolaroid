@@ -65,18 +65,24 @@ export default function App() {
         const response = await fetch(catalogUrl);
         const data = await response.json();
 
-        const serverDetails = data.find(
+        // Filter entries with the specified type and owner
+        const matchingEntries = data.filter(
           (listing) =>
             listing.type === "magic-polaroid" && listing.owner === "mvankir2"
         );
 
-        if (serverDetails) {
-          const url = `http://${serverDetails.address}:${serverDetails.port}`;
+        if (matchingEntries.length > 0) {
+          // Find the entry with the highest lastheardfrom parameter
+          const latestEntry = matchingEntries.reduce((latest, current) => {
+            return current.lastheardfrom > latest.lastheardfrom ? current : latest;
+          });
+
+          const url = `http://${latestEntry.address}:${latestEntry.port}`;
           setServerUrl(url);
           globalServerUrl = url; // Set global server URL
           console.log("Server URL set to:", url); // Debug log for server URL
         } else {
-          console.error("Server details not found in catalog");
+          console.error("No matching server entries found in catalog");
         }
       } catch (error) {
         console.error("Error fetching server details:", error);
