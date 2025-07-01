@@ -1,4 +1,4 @@
-# Magic Polaroid
+<h1>Magic Polaroid <img align="center" src="assets/readme/polaroid.png" height="100"></h1>
 
 > Final Project for Distributed Systems - CSE 40771
 
