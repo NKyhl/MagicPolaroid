@@ -6,15 +6,17 @@
 
 > Final Project for Distributed Systems - CSE 40771
 
-**Magic Polaroid** is a distributed computer vision system and mobile app that labels photos taken on the University of Notre Dame's campus by location. 
+**Magic Polaroid** is a self-improving distributed computer vision system and mobile app that labels photos taken on the University of Notre Dame's campus by location. 
 
 ![Diagram of a photo being Labeled](/assets/readme/labelling.png)
 
 Additionally, users can submit their photos to our backend, which periodically fine-tunes our classification model and redeploys the improved model automatically as people use our app. 
 
-In this way, **Magic Polaroid** acts as both a fun AI application and a way to crowd-source location-labeled images on Notre Dame's campus.
+In this way, **Magic Polaroid** acts as both a fun self-improving AI application and a way to crowd-source location-labeled images on Notre Dame's campus.
 
 [Link to Demo Video](https://drive.google.com/file/d/1cD5FMj5SmU5FbpTkUCZSCFq5f1kwleLU/view?usp=sharing)
+
+The original backend repository for this project is located [here](https://github.com/mavaki/nd-building-server), and was copied into the `classification-server` folder to create a monorepo. @mavaki and @nkyhl both contributed to this part of the project, despite the commit history.
 
 ## Table of Contents
 - [Getting Started](#getting-started)
