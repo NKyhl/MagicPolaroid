@@ -1,4 +1,8 @@
-<h1>Magic Polaroid <img align="center" src="assets/readme/polaroid.png" height="100"></h1>
+<h1>
+    <img align="center" src="assets/readme/polaroid2.png" height="100">
+    Magic Polaroid 
+    <img align="center" src="assets/readme/polaroid.png" height="100">
+</h1>
 
 > Final Project for Distributed Systems - CSE 40771
 
